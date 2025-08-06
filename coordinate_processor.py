@@ -2,6 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import json
 import sys
+import argparse
 from typing import List, Dict, Any
 from pykalman import KalmanFilter
 import numpy as np
@@ -65,15 +66,20 @@ def save_data_to_jsonl(data: List[Dict[str, Any]], file_path: str):
 
 # Main
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='GPS 좌표 스무딩')
+    parser.add_argument('--input', '-i', default='dummy/data2.jsonl', help='입력 파일 경로')
+    parser.add_argument('--output', '-o', default='dummy/smoothed_data.jsonl', help='출력 파일 경로')
+    args = parser.parse_args()
+    
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    input_file = os.path.join(script_dir, "dummy/data2.jsonl")
-    output_file = os.path.join(script_dir, "smoothed_data.jsonl")
+    input_file = os.path.join(script_dir, args.input)
+    output_file = os.path.join(script_dir, args.output)
 
-    # 러닝 데이터 업로드
-    running_data = load_jsonl_data(input_file)
+    # 러닝 데이터 로드 - custom coordinate 형식
+    running_data = load_jsonl_data(input_file) 
     
     # Kalman Filter를 활용하여 보간
     smoothed_data, original_measurements, smoothed_measurements = smooth_gps_with_kalman(running_data)
     
     # 보간한 데이터 저장
-    save_data_to_jsonl(smoothed_data, output_file)
+    save_data_to_jsonl(smoothed_data, output_file) # custom coordinate 형식
