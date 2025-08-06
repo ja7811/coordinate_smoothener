@@ -5,9 +5,9 @@ import requests
 
 # ORSM 요청
 def request_osrm_match(input_path: str,
+                       output_path: str,
                        host: str = "localhost:5050",
                        profile: str = "foot"):
-                       
     coords = []
     timestamps = []
 
@@ -40,6 +40,7 @@ def request_osrm_match(input_path: str,
     url = f"http://{host}/match/v1/{profile}/{coord_str}?steps=true&radiuses={radis_str}"
 
     # OSRM 요청
+    response = None
     try:
         # 응답
         response = requests.get(url, timeout=30)
@@ -47,20 +48,18 @@ def request_osrm_match(input_path: str,
         result_json = response.json()
 
         # 저장
-        output_path = "osrm_result.json"
         with open(output_path, "w", encoding="utf-8") as out_f:
             json.dump(result_json, out_f, ensure_ascii=False, indent=2)
     
     # 예외 처리
     except requests.exceptions.HTTPError as e:
         print(f"\n[Error] OSRM API Error: {e}", file=sys.stderr)
-        print(f"Response from server: {response.text}", file=sys.stderr)
+        print(f"Response from server: {response.text if response else '(No response)'}", file=sys.stderr)
     except requests.exceptions.RequestException as e:
         print(f"\n[Error] HTTP Request Failed: {e}", file=sys.stderr)
     except json.JSONDecodeError:
         print(f"\n[Error] Failed to decode JSON response from server.", file=sys.stderr)
-        print(f"Raw response: {response.text}", file=sys.stderr)
-
+        print(f"Raw response: {response.text if response else '(No response)'}", file=sys.stderr)
 
 # Main
 if __name__ == "__main__":
@@ -70,6 +69,11 @@ if __name__ == "__main__":
     parser.add_argument(
         'input_file',
         help="Input file with one JSON object per line (e.g., data.jsonl)"
+    )
+    parser.add_argument(
+        'output_file',
+        default="dummy/osrm_result.json",
+        help ="Output file to save the OSRM match results (e.g., osrm_result.json)"
     )
     parser.add_argument(
         '--host',
@@ -82,4 +86,4 @@ if __name__ == "__main__":
         help="Profile for the match API (default: foot)"
     )
     args = parser.parse_args()
-    request_osrm_match(args.input_file, args.host, args.profile)
+    request_osrm_match(args.input_file, args.output_file, args.host, args.profile)
