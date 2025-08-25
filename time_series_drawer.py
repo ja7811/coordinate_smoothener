@@ -99,7 +99,7 @@ def main(input_files, osrm_file = None, output_file=None):
     # Add line traces first (so they appear behind points)
     for file_type in combined_df['type'].unique():
         df_subset = combined_df[combined_df['type'] == file_type]
-        fig.add_trace(go.Scattermapbox(
+        fig.add_trace(go.Scattermap(
             lat=df_subset['lat'],
             lon=df_subset['lon'],
             mode='lines',
@@ -111,7 +111,7 @@ def main(input_files, osrm_file = None, output_file=None):
     # Add scatter points on top
     for file_type in combined_df['type'].unique():
         df_subset = combined_df[combined_df['type'] == file_type]
-        fig.add_trace(go.Scattermapbox(
+        fig.add_trace(go.Scattermap(
             lat=df_subset['lat'],
             lon=df_subset['lon'],
             mode='markers',
@@ -122,7 +122,7 @@ def main(input_files, osrm_file = None, output_file=None):
         ))
     
     fig.update_layout(
-        mapbox=dict(
+        map=dict(
             style="open-street-map",
             zoom=15,
             center=dict(
