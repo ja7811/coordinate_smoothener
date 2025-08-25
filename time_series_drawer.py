@@ -2,7 +2,6 @@ import json
 import pandas as pd
 import argparse
 import os
-from typing import TypedDict, List
 import plotly.express as px
 
 def load_json(file_path):
@@ -15,45 +14,9 @@ def load_jsonl(file_path):
         data = [json.loads(line) for line in file if line.strip()]
     return data
 
-
-# Target data has these types
-# { code: "OK", matchings: [], tracepoints: [{ location: [double, double] }] }
-class Step(TypedDict):
-    intersections: List[dict]
-
-class Leg(TypedDict):
-    steps: List[dict]
-
-class Matching(TypedDict):
-    confidence: float
-    legs: List[dict]
-    weight_name: str
-    geometry: str
-    weight: float
-    duration: float
-    distance: float
-
-class Tracepoint(TypedDict):
-    location: List[float]
-
-class OriginalMapData(TypedDict):
-    timestampe: str
-    lat: float
-    lng: float
-    dist: float
-    pace: float
-    alt: int
-    cadence: int
-    bpm: int
-    isRunning: bool
-
-class OsrmMapData(TypedDict):
-    code: str
-    matchings: List[dict]
-    tracepoints: List[Tracepoint]
-
-def main(input_files, osrm_file = None, output_file=None):
+def main(input_files, output_file=None):
     all_dataframes = []
+    all_original_data = []  # 원본 데이터 저장
     colors = ["red", "blue", "black", "green"]
     color_map = {}
     
@@ -61,10 +24,16 @@ def main(input_files, osrm_file = None, output_file=None):
         # Load data
         data = load_jsonl(file_path)
         
-        # Create DataFrame
+        # Create DataFrame with additional hover data
         df = pd.DataFrame({
             "lon": [item["lng"] for item in data],
             "lat": [item["lat"] for item in data],
+            "timestamp": [item.get("timeStamp", "N/A") for item in data],
+            "altitude": [item.get("alt", "N/A") for item in data],
+            "pace": [item.get("pace", "N/A") for item in data],
+            "bpm": [item.get("bpm", "N/A") for item in data],
+            "distance": [item.get("dist", "N/A") for item in data],
+            "angle": [item.get("angle", "N/A") for item in data]
         })
         
         # Assign type and color
@@ -75,21 +44,6 @@ def main(input_files, osrm_file = None, output_file=None):
     
     # Combine all dataframes
     combined_df = pd.concat(all_dataframes, ignore_index=True)
-    
-    # Load osrm data if provided
-    if osrm_file:
-        osrm_data: OsrmMapData = load_json(osrm_file)
-        valid_tracepoints = [
-            tp for tp in osrm_data['tracepoints']
-            if tp is not None and 'location' in tp and isinstance(tp['location'], list) and len(tp['location']) == 2
-        ]
-        osrmDf = pd.DataFrame({
-            "lon": [tp['location'][0] for tp in valid_tracepoints],
-            "lat": [tp['location'][1] for tp in valid_tracepoints],
-            "type": "OSRM Result"
-        })
-        color_map["OSRM Result"] = colors[len(all_dataframes) % len(colors)]
-        combined_df = pd.concat([combined_df, osrmDf], ignore_index=True)
 
     # Multi Line + Scatter View
     import plotly.graph_objects as go
@@ -117,8 +71,17 @@ def main(input_files, osrm_file = None, output_file=None):
             mode='markers',
             marker=dict(color=color_map[file_type], size=6),
             name=file_type,
-            hovertemplate='<b>%{text}</b><br>Lat: %{lat}<br>Lon: %{lon}<extra></extra>',
-            text=[file_type] * len(df_subset)
+            hovertemplate='<b>%{text}</b><br>' +
+                         'Lat: %{lat}<br>' +
+                         'Lon: %{lon}<br>' +
+                         'Timestamp: %{customdata[0]}<br>' +
+                        #  'Altitude: %{customdata[1]}<br>' +
+                        #  'Pace: %{customdata[2]}<br>' +
+                        #  'BPM: %{customdata[3]}<br>' +
+                        #  'Distance: %{customdata[4]}<br>' +
+                         'Angle: %{customdata[5]}<extra></extra>',
+            text=[file_type] * len(df_subset),
+            customdata=df_subset[['timestamp', 'altitude', 'pace', 'bpm', 'distance', 'angle']].values
         ))
     
     fig.update_layout(
@@ -145,8 +108,7 @@ def main(input_files, osrm_file = None, output_file=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GPS 트레이스포인트 시각화')
     parser.add_argument('files', nargs='*', default=['dummy/data2.jsonl'], help='보여줄 JSONL 파일들 (기본값: dummy/data2.jsonl)')
-    parser.add_argument('--osrm', help="OSRM API 응답 파일 경로 (선택적)")
     parser.add_argument('--output', '-o', help='HTML 출력 파일 경로 (지정하지 않으면 브라우저로 바로 표시)')
     args = parser.parse_args()
     
-    main(args.files, args.osrm, args.output)
+    main(args.files, args.output)
