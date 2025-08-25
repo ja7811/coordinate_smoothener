@@ -27,7 +27,6 @@ if __name__ == "__main__":
         help='Input file to aggregate - which is GPS coordinates in JSONL format'
     )
     parser.add_argument(
-        'N',
         '--n',
         type=int,
         default=3,

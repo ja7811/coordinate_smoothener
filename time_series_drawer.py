@@ -91,24 +91,50 @@ def main(input_files, osrm_file = None, output_file=None):
         color_map["OSRM Result"] = colors[len(all_dataframes) % len(colors)]
         combined_df = pd.concat([combined_df, osrmDf], ignore_index=True)
 
-    # Multi Scatter View
-    fig = px.scatter_map(
-        combined_df,
-        lat="lat",
-        lon="lon",
-        zoom=15,
+    # Multi Line + Scatter View
+    import plotly.graph_objects as go
+    
+    fig = go.Figure()
+    
+    # Add line traces first (so they appear behind points)
+    for file_type in combined_df['type'].unique():
+        df_subset = combined_df[combined_df['type'] == file_type]
+        fig.add_trace(go.Scattermapbox(
+            lat=df_subset['lat'],
+            lon=df_subset['lon'],
+            mode='lines',
+            line=dict(color=color_map[file_type], width=2),
+            name=f"{file_type} (line)",
+            showlegend=False
+        ))
+    
+    # Add scatter points on top
+    for file_type in combined_df['type'].unique():
+        df_subset = combined_df[combined_df['type'] == file_type]
+        fig.add_trace(go.Scattermapbox(
+            lat=df_subset['lat'],
+            lon=df_subset['lon'],
+            mode='markers',
+            marker=dict(color=color_map[file_type], size=6),
+            name=file_type,
+            hovertemplate='<b>%{text}</b><br>Lat: %{lat}<br>Lon: %{lon}<extra></extra>',
+            text=[file_type] * len(df_subset)
+        ))
+    
+    fig.update_layout(
+        mapbox=dict(
+            style="open-street-map",
+            zoom=15,
+            center=dict(
+                lat=combined_df['lat'].mean(),
+                lon=combined_df['lon'].mean()
+            )
+        ),
         height=1200,
-        map_style="open-street-map",
-        title="Tracepoints Map (Multiple Files)",
-        labels={"lat": "Latitude", "lon": "Longitude", "type": "Data Type"},
-        hover_data=["lat", "lon", "type"],
-        color="type",
-        color_discrete_map=color_map,
-        size_max=8
+        title="Tracepoints Map (Lines + Points)",
+        showlegend=True
     )
 
-    fig.update_layout(mapbox_style="open-street-map")
-    
     # 지도 시각화 생성
     if output_file:
         fig.write_html(output_file)
