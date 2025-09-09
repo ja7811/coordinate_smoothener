@@ -71,8 +71,10 @@ def extract_edge_points(points: List[Dict], epsilon: float) -> List[Dict]:
     _rdp(points, 0, len(points) - 1, out, epsilon)
 
     # 타임스탬프('timeStamp') 기준으로 정렬하여 경로의 순서를 보장
-    out.sort(key=lambda p: p['timeStamp'])
-
+    try:
+        out.sort(key=lambda p: p['timeStamp'])
+    except: 
+        out.sort(key=lambda p: p['ts'])
     # 최종 결과는 'timeStamp'를 제외한 형태로 변환하여 반환
     return out
 
